@@ -1,0 +1,228 @@
+package com.mycompany.startx;
+
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
+import java.util.Scanner;
+
+public class App {
+
+    static Scanner input = new Scanner(System.in);
+    static Book[] books = new Book[1000];
+    static Book[] list = new Book[20];
+    static Book[] searchResults = new Book[1000];
+    static int n = 0, saved = 0, searchCount = 0;
+
+    static class Book {
+        String title, author, url;
+
+        Book(String title, String author, String url) {
+            this.title = title;
+            this.author = author;
+            this.url = url;
+        }
+    }
+
+    public static void main(String[] args) {
+        int choice = -1;
+
+        do {
+            System.out.println("\n===== BOOK EXPLORER =====");
+            System.out.println("1. Explore Books");
+            System.out.println("2. Search by Title");
+            System.out.println("3. Search by Author");
+            System.out.println("4. Add Book");
+            System.out.println("5. View Reading List");
+            System.out.println("6. Remove Book");
+            System.out.println("7. Display Book Details");
+            System.out.println("0. Exit");
+            System.out.print("Enter your choice: ");
+
+            choice = input.nextInt();
+            input.nextLine();
+
+            switch (choice) {
+                case 1:
+                    exploreBooks();
+                    break;
+
+                case 2:
+                    System.out.print("Enter book title: ");
+                    searchBook(input.nextLine());
+                    break;
+
+                case 3:
+                    System.out.print("Enter author name: ");
+                    searchBook(input.nextLine(), true);
+                    break;
+
+                case 4:
+                    addBook();
+                    break;
+
+                case 5:
+                    viewList();
+                    break;
+
+                case 6:
+                    removeBook();
+                    break;
+
+                case 7:
+                    details();
+                    break;
+
+                case 0:
+                    System.out.println("Goodbye!");
+                    break;
+
+                default:
+                    System.out.println("Invalid choice!");
+            }
+
+        } while (choice != 0);
+    }
+
+    // Explore all books
+    static void exploreBooks() {
+        searchBook("", false);
+    }
+
+    // Search overload
+    static void searchBook(String keyword) {
+        searchBook(keyword, false);
+    }
+
+    static void searchBook(String keyword, boolean byAuthor) {
+        searchCount = 0;
+
+        if (byAuthor) {
+            System.out.println("Author search is not available.");
+            return;
+        }
+
+        try {
+            for (int page = 1; page <= 50; page++) {
+
+                String url = "https://books.toscrape.com/catalogue/page-"
+                        + page + ".html";
+
+                Document doc = Jsoup.connect(url)
+                        .userAgent("Mozilla/5.0")
+                        .timeout(20000).get();
+
+                Elements links = doc.select("article.product_pod h3 a");
+
+                for (Element e : links) {
+                    String title = e.attr("title");
+                    String bookUrl = e.absUrl("href");
+
+                    if (title.toLowerCase().contains(
+                            keyword.toLowerCase())) {
+
+                        if (searchCount < searchResults.length) {
+                            searchResults[searchCount++] =
+                                    new Book(title, "Unknown", bookUrl);
+                        }
+                    }
+                }
+            }
+
+            if (searchCount == 0) {
+                System.out.println("No books found.");
+            } else {
+                for (int i = 0; i < searchCount; i++) {
+                    System.out.println((i + 1) + ". "
+                            + searchResults[i].title);
+                    System.out.println(searchResults[i].url);
+                }
+
+                System.out.println("Total: " + searchCount);
+            }
+
+        } catch (Exception e) {
+            System.out.println("Connection error: " + e.getMessage());
+        }
+    }
+
+    // Add book
+    static void addBook() {
+        if (saved == list.length) {
+            System.out.println("Reading list is full!");
+            return;
+        }
+
+        System.out.print("Enter book title: ");
+        String title = input.nextLine();
+
+        System.out.print("Enter author: ");
+        String author = input.nextLine();
+
+        System.out.print("Enter book URL: ");
+        String url = input.nextLine();
+
+        list[saved++] = new Book(title, author, url);
+        System.out.println("Book added successfully!");
+    }
+
+    // View reading list
+    static void viewList() {
+        if (saved == 0) {
+            System.out.println("Reading list is empty.");
+            return;
+        }
+
+        for (int i = 0; i < saved; i++) {
+            System.out.println((i + 1) + ". "
+                    + list[i].title + " - " + list[i].author);
+        }
+    }
+
+    // Remove book
+    static void removeBook() {
+        viewList();
+
+        if (saved == 0)
+            return;
+
+        System.out.print("Enter book number to remove: ");
+        int index = input.nextInt();
+        input.nextLine();
+
+        if (index < 1 || index > saved) {
+            System.out.println("Invalid number!");
+            return;
+        }
+
+        for (int i = index - 1; i < saved - 1; i++) {
+            list[i] = list[i + 1];
+        }
+
+        list[--saved] = null;
+        System.out.println("Book removed!");
+    }
+
+    // Display details
+    static void details() {
+        viewList();
+
+        if (saved == 0)
+            return;
+
+        System.out.print("Enter book number: ");
+        int index = input.nextInt();
+        input.nextLine();
+
+        if (index < 1 || index > saved) {
+            System.out.println("Invalid number!");
+            return;
+        }
+
+        Book b = list[index - 1];
+
+        System.out.println("\nTitle: " + b.title);
+        System.out.println("Author: " + b.author);
+        System.out.println("URL: " + b.url);
+    }
+}
